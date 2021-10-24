@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ez player</title>
+    <title>EZ Player</title>
+
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
 
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link rel="stylesheet" href="css/AudioPlayer.css">
@@ -104,7 +106,7 @@
 <body>
     <div id="app">
         <header>
-            <h3>EZ Player</h3>
+            <h3>{{title}}</h3>
             <div>
                 <span v-if="isLogin == false" @click="openLoginPopup">로그인</span>
                 <span v-if="isLogin" @click="logout">로그아웃</span>
@@ -169,13 +171,10 @@
                     this.getSubList();
                     return;
                 }
-
                 this.setDemoList();
-                
                 window.addEventListener('DOMContentLoaded', (event) => {
                     this.runPlayer();
                 });
-
             },
             methods: {
                 setDemoList: function() {
