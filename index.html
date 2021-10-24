@@ -15,42 +15,282 @@
             height: 600px;
             border: solid 1px gray;
         }
+        header {  
+            height: 75px;
+            padding: 1rem;
+            color: black;
+            background: lightpink;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        header div span {
+            margin-left: 20px;
+            color: black;
+        }
+        .subList {
+            height: 75px;
+            padding: 1rem;
+            font-size: large;
+            background: lightblue;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        /* The Modal (background) */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgb(0,0,0); /* Fallback color */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+
+        /* Modal Content/Box */
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+        }
+
+        /* The Close Button */
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .loginButton {
+            width: 100%; 
+            background: lightpink;
+            height: 60px;
+            padding: 1rem;
+            font-size: x-large;
+            font-weight: bold;
+        }
+
+        .loginInput {
+            height: 60px;
+            padding: 1rem;
+            width: 100%; 
+            font-size: x-large;
+            font-weight: bold;
+        }
+        .loginLabel {
+            height: 60px;
+            font-size: x-large;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
-    <!-- Audio player container-->
-    <div id='player'></div>
+    <div id="app">
+        <header>
+            <h3>EZ Player</h3>
+            <div>
+                <span v-if="isLogin == false" @click="openLoginPopup">로그인</span>
+                <span v-if="isLogin" @click="logout">로그아웃</span>
+            </div>
+        </header>
+        <div class="subList" v-if="subList != null && subList.length > 0">
+            <a href="#" 
+                v-for="sub in subList"
+                @click="getMusicList(sub)"
+                >{{sub}}</a>
+        </div>
+        <!-- Audio player container-->
+        <div id='player'></div>
+
+        <!-- The Modal -->
+        <div id="myModal" class="modal" v-bind:style="modal.style">
+
+            <!-- Modal content -->
+            <div class="modal-content">
+                <span class="close" @click="closePopup">&times;</span><br>
+                <label for="id" class="loginLabel">ID</label> <br>
+                <input id="id" name="id" type="email" class="loginInput"
+                    v-model="modal.user.id" /> <br>
+                <label for="pwd" class="loginLabel">비밀번호</label> <br>
+                <input id="pwd" name="pwd" type="password" class="loginInput"
+                    v-model="modal.user.pwd" /> <br>
+                <button @click="signIn" class="loginButton">로그인</button>
+            </div>
+        
+        </div>
+    </div>
 
     <!-- Audio player js begin-->
     <script src="js/AudioPlayer.js"></script>
- 
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@0.23.0/dist/axios.min.js"></script>
+
     <script>
-        const youtubeFrees = [
-            'Chocolate_Cookie_Jam-An_Jone.mp3',
-            'Digital_Ghosts-Unicorn_Heads.mp3',
-            'Just_Dance-Patrick_Patrikios.mp3',
-            'Nine_Lives-Unicorn_Heads.mp3',
-            'Stellar_Wind-Unicorn_Heads.mp3',
-            'URL_Melt-Unicorn_Heads.mp3',
-            'Wolf_Moon-Unicorn_Heads.mp3'
-        ]
-        const youtubeFreesCover = 'youtube-free/yt_1200.png';
-        const youtubeFreesPlayList = youtubeFrees.map(file => {
-            return {
-                icon: youtubeFreesCover,
-                title: file.split('-')[0].trim().replaceAll('_', ' '),
-                file: `youtube-free/${file}`
+        const API_HOST_URI = 'http://193.123.248.162:8080';
+        const app = new Vue({
+            el: '#app',
+            data: {
+                title: 'EZ Player',
+                musicList: [{icon: null, title: 'test title', file: 'youtube-free/Wolf_Moon-Unicorn_Heads.mp3'}],
+                subList: [],
+                isLogin: false,
+                axiosConfig: null,
+                modal: {
+                    user: {
+                        id: '',
+                        pwd: ''
+                    },
+                    style: {
+                        display: 'none'
+                    }
+                }
+            },
+            created: function () {
+                const login = this.checkSignIn();
+                if (login) {
+                    this.getMusicList();
+                    this.getSubList();
+                    return;
+                }
+
+                this.setDemoList();
+                
+                window.addEventListener('DOMContentLoaded', (event) => {
+                    this.runPlayer();
+                });
+
+            },
+            methods: {
+                setDemoList: function() {
+                    const youtubeFrees = [
+                        'Chocolate_Cookie_Jam-An_Jone.mp3',
+                        'Digital_Ghosts-Unicorn_Heads.mp3',
+                        'Just_Dance-Patrick_Patrikios.mp3',
+                        'Nine_Lives-Unicorn_Heads.mp3',
+                        'Stellar_Wind-Unicorn_Heads.mp3',
+                        'URL_Melt-Unicorn_Heads.mp3',
+                        'Wolf_Moon-Unicorn_Heads.mp3'
+                    ];
+                    const youtubeFreesCover = 'youtube-free/yt_1200.png';
+                    this.musicList = youtubeFrees.map(file => {
+                        return {
+                            icon: youtubeFreesCover,
+                            title: file.split('-')[0].trim().replaceAll('_', ' '),
+                            file: `youtube-free/${file}`
+                        }
+                    });
+                },
+                checkSignIn: function () {
+                    const token = localStorage.getItem('ezplayer-token');
+                    if (token != null) {
+                        this.axiosConfig = {
+                            headers: {
+                                Authorization: token
+                            }
+                        }
+                        this.isLogin = true;
+                        return true;
+                    } 
+
+                    this.isLogin = false;
+                    return false;
+                },
+                logout: function() {
+                    localStorage.removeItem('ezplayer-token');
+                    this.isLogin = false;
+                    this.axiosConfig = null;
+                    this.musicList = [];
+                    this.subList = [];
+                    this.setDemoList();
+                    this.runPlayer();
+                },
+                openLoginPopup: function () {
+                    this.modal.style.display = "block";
+                },
+                closePopup: function () {
+                    this.modal.style.display = "none";
+                    this.modal.user.id = '';
+                    this.modal.user.pwd = '';
+                },
+                signIn: function (idAndPwd) {
+                    axios.post(`${API_HOST_URI}/auth/signIn`, this.modal.user, this.axiosConfig)
+                    .then(res => {
+                        const token = res.data;
+                        localStorage.setItem('ezplayer-token', token);
+                        this.isLogin = true;
+                        this.axiosConfig = {
+                            headers: {
+                                Authorization: token
+                            }
+                        }
+                        this.getMusicList();
+                        this.getSubList();
+                        this.closePopup();
+                    })
+                    .catch(err => {
+                        alert(err.response.data);
+                    })
+                },
+                getMusicList: function (sub) {
+                    console.log(sub)
+                    var param = sub != null ? `?sub=${sub}` : ''
+                    var url = `${API_HOST_URI}/api/musicList${param}`;
+                    axios.get(url, this.axiosConfig)
+                    .then(res => {
+                        this.musicList = res.data.map(info => {
+                            return {
+                                icon: info.icon,
+                                title: info.title,
+                                file: info.file + '?token=' + this.axiosConfig.headers.Authorization
+                            }
+                        });
+                        this.runPlayer();
+                    })
+                    .catch(err => {
+                        console.log(err.data);
+                    });      
+                },
+                runPlayer: function() {
+                    AP.destroy();
+                    try {
+                        AP.init({
+                            container:'#player',//a string containing one CSS selector
+                            volume   : 1,
+                            autoPlay : true,
+                            notification: false,
+                            playList: this.musicList
+                        });
+                    } catch (err) {
+                        console.log(err)
+                    }
+                },
+                getSubList: function () {
+                    axios.get(`${API_HOST_URI}/api/categories`, this.axiosConfig)
+                    .then(res => {
+                        this.subList = res.data;
+                    })
+                    .catch(err => {
+                        console.log(err);
+                    });    
+                }
             }
-        });
-        
-        window.addEventListener('DOMContentLoaded', (event) => {
-            AP.init({
-                container:'#player',//a string containing one CSS selector
-                volume   : 1,
-                autoPlay : true,
-                notification: false,
-                playList: youtubeFreesPlayList
-            });
         });
 
     </script>
